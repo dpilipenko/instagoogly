@@ -1,3 +1,7 @@
 Insta-Googly
 ============
 
+To run locally:
+  1. Fetch latest version
+  2. Execute the 'gradlew run' command
+  
