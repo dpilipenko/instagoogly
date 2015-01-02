@@ -65,5 +65,43 @@
     	</ol>
     </div>
 </div>
+<hr />
+<div>
+	<p>Below you should see a live feed from your web camera</p>
+	<video autoplay id="video" width="320" height="240"></video>
+	<script type="text/javascript">
+		navigator.getUserMedia = getUserMedia();
+		if (navigator.getUserMedia) {
+			navigator.getUserMedia({video: true}, doVideoAccepted, doVideoDeclined);
+		} else {
+			doVideoAbsent();
+		}
+		
+		// Call if user accepts to allow video
+		function doVideoAccepted(stream) {
+			var video = document.querySelector("#video");
+			video.src = window.URL.createObjectURL(stream);
+		}
+		
+		// Call if user declines to allow video
+		function doVideoDeclined(e) {
+			alert('video declined');
+		}
+		
+		// Call if browser does not support video
+		function doVideoAbsent() {
+			alert('Your browser does not support web cameras');
+		}
+		
+		function getUserMedia() {
+			return navigator.getUserMedia ||
+					navigator.webkitGetUserMedia ||
+					navigator.mozGetUserMedia ||
+					navigator.msGetUserMedia ||
+					navigator.oGetUserMedia;
+		}
+	</script>
+</div>
+
 </body>
 </html>
