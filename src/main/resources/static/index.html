@@ -1,83 +1,17 @@
 <html>
-<head>
-	<title>Webcam</title>
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/0.3.4/sockjs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
-</head>
-<body>
-	<noscript><h2 style="color: #ff0000">Seems your browser doesn't support JavaScript! Websocket relies on Javascript being enabled. Please enable Javascript and reload this page!</h2></noscript>
-	<div>
-		<button id="connect" onclick="connect();">Connect</button>
-	</div>
+	<head>
+		<title>Insta-Googly</title>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/0.3.4/sockjs.min.js"></script>
+	    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+	    <link rel="stylesheet" type="text/css" href="main.css">
+	</head>
+	<body>
 		<div>
-			<video autoplay id="video" width="160" height="120"></video>
-			<label for="video">Live feed</label>
+			<video autoplay id="video" width="160" height="120" style="visibility: hidden;  width:0; height:0;"></video>
+			<canvas id="canvas" width="160" height="120" style="visibility: hidden;  width:0; height:0;"></canvas>
+			<canvas id="output" width="160" height="120"></canvas>
 		</div>
-		<div>
-			<canvas id="canvas" width="160" height="120"></canvas>
-			<label for="canvas">Client snapshot</label>
-		</div>
-		<div>
-			<img id="image" width="160" height="120" />
-			<label for="image">Server response</label>
-		</div>
-	<script>
-		var stompClient = null;
-		var outputImage = document.querySelector('#image');
-		
-		function connect() {
-			var socket = new SockJS('/cameraIn');
-			stompClient = Stomp.over(socket);
-			stompClient.connect({}, function(frame){
-				stompClient.subscribe('/topic/cameraOut', function(res) {
-					readImageURI(JSON.parse(res.body).base64Image);
-				});
-				doVideoCapture();
-			});
-		}
-		
-		function sendImageURI(uri) {
-			stompClient.send('/app/cameraIn', {}, JSON.stringify({'base64Image': uri}));
-		}
-		
-		function readImageURI(uri) {
-			outputImage.src = uri;
-		}
-		
-		function doVideoCapture() {
-			/* Call if user accepts to allow video */
-			function doVideoAccepted(stream) {
-				var video = document.querySelector('#video');
-				video.src = window.URL.createObjectURL(stream);
-				
-				var canvasOld = document.querySelector('#canvas');
-				var ctx = canvasOld.getContext('2d');
-				setInterval(function () {
-					ctx.drawImage(video, 0, 0, canvasOld.width, canvasOld.height);
-					sendImageURI(canvasOld.toDataURL('image/jpeg', 1.0));
-				}, 100);
-			}
-			
-			/* Call if user declines to allow video */
-			function doVideoDeclined(e) {
-				alert('video declined');
-			}
-			
-			/* Call if browser does not support video */
-			function doVideoAbsent() {
-				alert('Your browser does not support web cameras');
-			}
-			
-			navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia ||
-									navigator.mozGetUserMedia || navigator.msGetUserMedia ||
-									navigator.oGetUserMedia;
-			if (navigator.getUserMedia) {
-				navigator.getUserMedia({video: true}, doVideoAccepted, doVideoDeclined);
-			} else {
-				doVideoAbsent();
-			}
-		}
-	</script>
-</body>
+	    <script src="main.js"></script>
+	</body>
 </html>
 
