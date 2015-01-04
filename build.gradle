@@ -28,9 +28,10 @@ repositories {
 }
 
 dependencies {
-    compile("org.springframework.boot:spring-boot-starter-websocket")
-    compile("org.springframework:spring-messaging")
-    testCompile("junit:junit")
+    compile 'commons-net:commons-net:3.3'
+    compile 'org.springframework.boot:spring-boot-starter-websocket'
+    compile 'org.springframework:spring-messaging'
+    testCompile 'junit:junit'
 }
 
 task wrapper(type: Wrapper) {
