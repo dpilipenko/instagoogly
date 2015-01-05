@@ -27,6 +27,7 @@ repositories {
 }
 
 dependencies {
+    compile fileTree(dir: 'lib', include: ['*.jar'])
     compile 'commons-net:commons-net:3.3'
     compile 'org.springframework.boot:spring-boot-starter-websocket'
     compile 'org.springframework:spring-messaging'
@@ -35,4 +36,8 @@ dependencies {
 
 task wrapper(type: Wrapper) {
     gradleVersion = '2.0'
+}
+
+run {
+    systemProperty "java.library.path", 'dist/native'
 }

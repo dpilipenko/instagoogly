@@ -1,7 +1,7 @@
 package instagoogly;
 
-import java.awt.Color;
 import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -9,6 +9,14 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 
 import org.apache.commons.net.util.Base64;
+import org.opencv.core.Core;
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfRect;
+import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
+import org.opencv.imgproc.Imgproc;
+import org.opencv.objdetect.CascadeClassifier;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.stereotype.Controller;
@@ -16,47 +24,58 @@ import org.springframework.stereotype.Controller;
 @Controller
 public class CameraController {
 
+	private static final String prefix = "data:image/jpeg;base64,";
+	private static final String classifier = "/haarcascade_eye.xml";
+	
 	@MessageMapping("/cameraIn")
 	@SendTo("/topic/cameraOut")
 	public CameraOutMessage processCamera(CameraInMessage message) throws Exception {
-		String prefix = getPrefix(message);
-
-		byte[] imageData = decodeImage(prefix, message.getBase64Image());
-		byte[] newImageData = processImage(imageData);
-		String newImage = encodeImage(prefix, newImageData);
-		
+		Mat mat = decodeFromString(message.getBase64Image());
+		mat = findAndDrawEyes(mat);
+		String newImage = encodeToString(mat);
 		return new CameraOutMessage(newImage);
 	}
 	
-	private String getPrefix(CameraInMessage message) {
-		String encodingPrefix = "base64,";
-		int contentStartIndex = message.getBase64Image().indexOf(encodingPrefix) + encodingPrefix.length();
-		String prefix = message.getBase64Image().substring(0, contentStartIndex);
-		return prefix;
+	private Mat decodeFromString(String encodedString) throws IOException {
+		// Base64 string to BufferedImage
+		byte[] rawImageData = Base64.decodeBase64(encodedString.substring(prefix.length()));
+		BufferedImage image = ImageIO.read(new ByteArrayInputStream(rawImageData));
+		
+		// BufferedImage to OpenCV Mat
+		byte[] imageData = ((DataBufferByte) image.getRaster().getDataBuffer()).getData();
+		Mat mat = new Mat(image.getHeight(), image.getWidth(), CvType.CV_8UC3);
+		mat.put(0, 0, imageData);
+		
+		// TODO Figure out why imageData works but rawImageData does not...(?)
+		return mat;
 	}
 	
-	private byte[] decodeImage(String prefix, String base64Image) {
-		return Base64.decodeBase64(base64Image.substring(base64Image.indexOf(prefix) + prefix.length()));
+	private Mat findAndDrawEyes(Mat mat) {
+		CascadeClassifier eyeDetector = new CascadeClassifier(getClass().getResource(classifier).getPath());
+		MatOfRect detections = new MatOfRect();
+	    eyeDetector.detectMultiScale(mat, detections);
+	    for (Rect rect : detections.toArray()) {
+	    	Core.rectangle(mat, rect.tl(), rect.br(), new Scalar(0, 255, 255));
+	    }
+	    return mat;
 	}
 	
-	private byte[] processImage(byte[] imageData) throws IOException {
-		BufferedImage image = ImageIO.read(new ByteArrayInputStream(imageData));
-		for (int x = 0; x < image.getWidth(); x++) {
-            for (int y = 0; y < image.getHeight(); y++) {
-                int rgba = image.getRGB(x, y);
-                Color col = new Color(rgba, true);
-                col = new Color(255 - col.getRed(),
-                                255 - col.getGreen(),
-                                255 - col.getBlue());
-                image.setRGB(x, y, col.getRGB());
-            }
-        }
+	private String encodeToString(Mat mat) throws IOException {
+		// Correct colors from BGR to RGB
+		Imgproc.cvtColor(mat, mat, Imgproc.COLOR_RGB2BGR);
+		
+		// OpenCV Mat to BufferedImage
+		byte[] rawImageData = new byte[mat.rows()*mat.cols()*(int)(mat.elemSize())];
+		mat.get(0, 0, rawImageData);
+		BufferedImage image = new BufferedImage(mat.cols(), mat.rows(), BufferedImage.TYPE_3BYTE_BGR);
+		image.getRaster().setDataElements(0,0, mat.cols(), mat.rows(), rawImageData);
+		
+		// BufferedImage to byte array
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();
 		ImageIO.write(image, "jpg", baos);
-		return baos.toByteArray();
-	}
-	
-	private String encodeImage(String prefix, byte[] imageData) {
+		byte[] imageData = baos.toByteArray();
+		
+		// TODO Figure out why imageData works but rawImageData does not...(?)
 		return prefix + Base64.encodeBase64String(imageData);
 	}
 }
