@@ -13,6 +13,7 @@ import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfRect;
+import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
@@ -55,7 +56,13 @@ public class CameraController {
 		MatOfRect detections = new MatOfRect();
 	    eyeDetector.detectMultiScale(mat, detections);
 	    for (Rect rect : detections.toArray()) {
-	    	Core.rectangle(mat, rect.tl(), rect.br(), new Scalar(0, 255, 255));
+	    	int midX = (2 * rect.x + rect.width) / 2;
+	    	int midY = (2 * rect.y + rect.height) / 2;
+	    	int radius = rect.width/2;
+	        Core.circle(mat, new Point(midX, midY), radius, new Scalar(255, 255, 255), -1);
+	        Core.circle(mat, new Point(midX, midY), radius, new Scalar(0, 0, 0), 1);
+	        Core.circle(mat, new Point(midX, midY), radius/2, new Scalar(255, 191, 0), -1);
+	        Core.circle(mat, new Point(midX, midY), radius/4, new Scalar(0, 0, 0), -1);
 	    }
 	    return mat;
 	}
