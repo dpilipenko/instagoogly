@@ -1,0 +1,92 @@
+<link rel="import" href="../bower_components/polymer/polymer.html">
+
+<polymer-element name="insta-googly">
+  <template>
+    <video autoplay id="video" width="320" height="240" style="visibility:hidden; width:0; height:0;"></video>
+    <canvas id="canvas" width="320" height="240" style="visibility: hidden;  width:0; height:0;"></canvas>
+    <canvas id="output" width="320" height="240"></canvas>
+  </template>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/0.3.4/sockjs.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+  <script>
+    (function() {
+      Polymer('insta-googly', {
+        _stompClient: null,
+
+        _canvas: null,
+        _output: null,
+        _outputCtx: null,
+        _video: null,       
+
+        ready: function() {
+          /* load template elements */
+          _canvas = this.$.canvas;
+          _output = this.$.output;
+          _outputCtx = _output.getContext('2d');
+          _video = this.$.video;
+
+          this.doConnect();
+        },
+
+        doConnect: function() {
+          var thisPolymer = this; /* copy 'this' in order to use inside stompClient connect method */
+          var socket = new SockJS('/cameraIn');
+          this._stompClient = Stomp.over(socket);
+
+          this._stompClient.connect({}, function(frame){
+            thisPolymer._stompClient.subscribe('/topic/cameraOut', function(res) {
+              var response = JSON.parse(res.body);
+              thisPolymer.doDrawImage(response.base64Image);
+            });
+            thisPolymer.doVideoCapture();
+          });
+        },
+
+        doDrawImage: function (imageAsBase64String) {
+          var image = new Image();
+          image.src = imageAsBase64String;
+          image.onload = function() {
+            _outputCtx.drawImage(image, 0, 0);
+          }
+        },
+
+        doSendImage: function (imageAsBase64String) {
+          this._stompClient.send('/app/cameraIn', {}, JSON.stringify({'base64Image': imageAsBase64String}));
+        },
+
+        doVideoCapture: function() {
+          var thisPolymer = this; /* copy 'this' in order to use inside stompClient connect method */
+
+          navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia ||
+              navigator.mozGetUserMedia || navigator.msGetUserMedia || navigator.oGetUserMedia;
+          
+          if (navigator.getUserMedia) {
+            navigator.getUserMedia({video: true}, onVideoAccepted, onVideoDeclined);
+          } else {
+            onVideoUnavailable();
+          }
+
+          function onVideoAccepted(stream) {
+            this._video.src = window.URL.createObjectURL(stream);
+
+            var canvasCtx = this._canvas.getContext('2d');
+            setInterval(function() {
+              canvasCtx.drawImage(this._video, 0, 0, this._output.width, this._output.height);
+              thisPolymer.doSendImage(
+                _canvas.toDataURL('image/jpeg', 1.0));
+            }, 1000/3);
+          }
+
+          function onVideoDeclined(e) {
+            alert('Camera access declined');
+          }
+
+          function onVideoUnavailable() {
+            alert('Your browser does not support camera');
+          }
+        }
+
+      });
+    })();
+  </script>
+</polymer-element>
