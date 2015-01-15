@@ -1,0 +1,16 @@
+{
+  "name": "instagoogly",
+  "version": "0.1.0",
+  "homepage": "https://github.com/dpilipenko/instagoogly",
+  "authors": [
+    "dpilipenko <dimap09@gmail.com>"
+  ],
+  "main": [
+    "index.html", "main.js", "main.css"
+  ],
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "polymer": "Polymer/polymer#~0.5.2"
+  }
+}
